@@ -20,7 +20,14 @@
     "mocha": "^6.2.2",
     "pdf-parse": "^1.1.1",
     "pdf-to-text": "0.0.7",
-    "should": "^13.2.3"
+    "should": "^13.2.3",
+    "request-promise": "^4.2.5",
+    "request": "^2.88.0",
+    "cheerio": "^1.0.0-rc.3",
+    "puppeteer": "^2.0.0", 
+    "instapaper": "^1.1.0",
+    "oauth-1.0a": "^2.2.6", 
+    "crypto-js": "^3.1.9-1"
   },
   "devDependencies": {
     "eslint": "^5.12.0",

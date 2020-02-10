@@ -63,3 +63,6 @@ node_modules/
 
 # dotenv environment variables file
 .env
+
+#service key 
+readingtool-479e1-firebase-adminsdk-gwwu7-9a4f25d89c.json
