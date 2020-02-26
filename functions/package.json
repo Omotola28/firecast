@@ -10,7 +10,7 @@
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "8"
+    "node": "10"
   },
   "dependencies": {
     "@google-cloud/firestore": "2.6.0",
@@ -27,7 +27,20 @@
     "puppeteer": "^2.0.0", 
     "instapaper": "^1.1.0",
     "oauth-1.0a": "^2.2.6", 
-    "crypto-js": "^3.1.9-1"
+    "crypto-js": "^3.1.9-1", 
+    "uuid": "^3.4.0",
+    "axios": "^0.19.2",
+    "axios-oauth-client" : "^1.2.1",
+    "axios-token-interceptor" : "^0.2.0",
+    "qs" : "^6.9.1",
+    "node-fetch" : "^2.6.0", 
+    "jquery": "^3.4.1",
+    "jsdom" : "^16.2.0",
+    "oauth" : "^0.9.15", 
+    "cors" : "^2.8.5", 
+    "get-urls" : "^9.2.0", 
+    "puppeteer-extra": "^3.1.9",
+    "puppeteer-extra-plugin-stealth": "^2.4.9"
   },
   "devDependencies": {
     "eslint": "^5.12.0",
