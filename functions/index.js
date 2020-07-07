@@ -7,78 +7,54 @@ const admin = require('firebase-admin');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const rp = require('request-promise');
-//const $ = require('cheerio');
-const url = 'https://medium.com/@iamsimplycute/highlights';
-
-const request = require('request')
 const OAuth = require('oauth-1.0a')
 const crypto = require('crypto')
 const uuidv4 = require('uuid/v4');
-const axios = require('axios').default;
-var qs = require('qs');
-const jsdom = require("jsdom");
-//var OAuth = require('oauth').OAuth;
-const cors = require('cors')({ origin: true});
-const cheerio = require('cheerio');
-const getUrls = require('get-urls');
-const fetch = require('node-fetch');
-//const puppeteer = require('puppeteer');
+var needle = require('needle');
 const puppeteer = require('puppeteer-extra');
+const config = functions.config()
 
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(StealthPlugin());
 
-axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
 
+var serviceAccount = require("./key/readingtool.json");
 
 admin.initializeApp({
-  credential: admin.credential.applicationDefault(),
+  credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://readingtool-479e1.firebaseio.com"
 });
 
+const db = admin.firestore();
+const fcm = admin.messaging();
 
-let db = admin.firestore();
-
+const INSTAPAPER_KEY = config.instapaper.key;
+const INSTAPAPER_SECRET = config.instapaper.secret;
 
 const scrapeData = async (username) => {
     
     const browser = await puppeteer.launch( {args: ['--no-sandbox'], headless: true });
     const page = await browser.newPage();
 
+    console.log(username);
+
     await page.goto(`https://medium.com/${username}/highlights`);
 
     
 
     try {
-        await page.waitForSelector("p.fn", { timeout: 3000 });
+            await page.waitForSelector(".fv", { visible: true, timeout: 50000 });
         
-        const data = await page.evaluate( () => {
+            const data = await page.evaluate( () => {
 
       
 
-            let items = document.querySelectorAll('p.fn');
-            const results = Array.from(items).map(v => v.innerText);
+            let items = document.querySelectorAll('.gb');
+            const results = Array.from(items).map(v => v.innerText)
+            //const results = Array.from(items).map(v => v.innerText);
                     
             return results;
-           //const marked = document.querySelectorAll('mark');
-           // const from = document.querySelectorAll('div');
-    
-          
-            
-           // const author = Array.from(from).map(v => v.innerText);
-           // let res = author.filter(it => new RegExp('From', "i").test(it));
-    
-           /*const marks = Array.from(marked)
-                .map(v =>  highlightData = {
-                                'id' : '',
-                                'highlight': v.innerText,
-                                'category': 'uncategorised',
-                                'color': '#808080',
-                }); */
-    
            
-            //return rawtxt;
         });
         await browser.close();
 
@@ -90,22 +66,11 @@ const scrapeData = async (username) => {
         return 'Invalid username';
        
       }
-
-   /*  const titles = await page.$$eval("p.fn", elements => {
-      const marks = elements.map(item => item.textContent);
-      
-      return marks
-    }); */
-
-
-  /*   const [el] = await page.$x('//*[@id="root"]/div/section/div[2]/div[1]');
-    const text = await el.$$eval('mark')
-    const rawtxt = await text.jsonValue(); */
-
    
 }
 
-exports.generateJson = functions.storage.object()
+
+exports.generateJson = functions.region('europe-west2').storage.object()
        .onFinalize(async (object) => {
            console.log("OBJECT", object);
            const fileBucket = object.bucket
@@ -176,8 +141,6 @@ exports.generateJson = functions.storage.object()
             
             let setDoc = db.collection('kindle').doc(currentUserUID[0]).collection('books').doc(fileName).set({
                 highlights: obj
-
-                
             });
   
             return JSON.stringify(gotback)
@@ -185,7 +148,7 @@ exports.generateJson = functions.storage.object()
 });
 
 
-exports.syncMedium = functions.https.onRequest((request, response) => {
+exports.syncMedium = functions.region('europe-west2').https.onRequest((request, response) => {
             
              let highlights = [];
              
@@ -208,6 +171,7 @@ exports.syncMedium = functions.https.onRequest((request, response) => {
     
                     console.log(highlights);
     
+                  
                    let setDoc = db.collection('medium').doc(body.data.uid).set({
                         mediumHighlights: highlights
                     });  
@@ -220,184 +184,260 @@ exports.syncMedium = functions.https.onRequest((request, response) => {
                 }
                 
             }).catch(function(err){
+                response.send({'data' : 'error'});
                 console.log(err);
                 return err;
             });
             
-            
-            
-             /* request(`https://medium.com/${data.name}/highlights`, 
-                    (error, response, html) => {
-                        if(!error & response.statusCode === 200){
-                            const $ = cheerio.load(html);
-                            $('div.fn.fo.y').each(function (index, element){
-
-                                const text = $(element)
-                                            .find('mark')
-                                            .text();
-                                console.log(text);
-                                //highlights.push($(element).text());
-                                
-                            }); 
-
-                            //console.log(highlights);
-                        }
-             });
-             */
-
-    
-           /*  console.log('USERNAME:' + data.name, data.uid);
-             var options = {
-                uri: `https://medium.com/${data.name}/highlights`,
-                transform: function (body) {
-                    return $.load(body);
-                }
-             };
-             rp(options)
-                 .then(function(html){
-                
-                    //console.log($('mark', html).text());
-                    $('mark', html).each(function (index, element){
-                        highlights.push($(element).text());
-                        
-                    }); 
-                    //console.log($('', html).text());
-                    console.log(highlights);
-                    return highlights;
-                
-                       /*  $('.eq', html).find('span').each(function (index, element) {
-                            source.push($(element).text());
-                        });
-    
-                        $('.eq', html).find('mark').each(function (index, element) {
-                            highlights.push($(element).text());
-                        }); 
-                         */
-                       
-    
-                        // result =  highlights.reduce(function(result, field, index) {
-                        //     result[source[index]] = field;
-                        //     return result;
-                        //   }, {}) 
-                          
-                        //console.log(result)
-                        //console.log(source, highlights);
-                        
-                    /*  let setDoc = db.collection('users').doc(userdetails.uid).collection('medium').doc(userdetails.uid).set({
-                            mediumHighlights: JSON.stringify(result)
-                        });   
-                        
-                        return JSON.stringify(result); 
-            
-                   
-                   
-                 })
-                 .catch(function(err){
-                    console.log(err);
-                    return;
-                    
-                });   */
 }); 
 
-exports.syncInstapaper = functions.https.onCall((data, context) => {
+exports.syncInstapaper = functions.region('europe-west2').https.onRequest((request, response) => {
 
+    const { body } = request;
+    const user = body.data.username;
+    const userpassword = body.data.password;
+    const uid = body.data.uid;
+    var bookmarkList = [];
+    var insta_token; 
+    var insta_token_secret;
+
+    //OAuth pack that creates signed signatures 
+   const oauth = OAuth({
+    consumer: {
+       key: INSTAPAPER_KEY, 
+       secret: INSTAPAPER_SECRET,
+   },
+   signature_method: 'HMAC-SHA1',
+   hash_function(base_string, key) {
+       return crypto
+           .createHmac('sha1', key)
+           .update(base_string)
+           .digest('base64')
+   },
+   })
+            
     
-
-  /*   var consumerKey    = '287b4ea14bdd4f488a7721abda57c261';
-    var consumerSecret = 'b0354423a77c43feb07671cd2a67d4ed';
-    
-
-    var oa = new OAuth(
-        null,
-        'https://www.instapaper.com/api/1/oauth/access_token',
-        consumerKey,
-        consumerSecret,
-        '1.0',
-        null,
-        'HMAC-SHA1'
-    );
-
-    oa._oauthParameterSeperator = ', ';
-
-    var x_auth_params = {
-        'x_auth_mode': 'client_auth',
-        'x_auth_password': '@Matilda28',
-        'x_auth_username': 'omotolashogunle@gmail.com'
-    };
-
-    oa.getOAuthAccessToken(null, null, null, x_auth_params, (err, token, tokenSecret, results) => {
-
-            if(err){
-                console.log('ERROR' +err);
-            }
-
-            // CAN HAZ TOKENS!
-            console.log(token);
-            console.log(tokenSecret);
-
-              // ZOMG DATA!!!
-            oa.post("https://www.instapaper.com/api/1/bookmarks/list", token, tokenSecret, (e, data, res) => {
-                if (e) console.error(e);        
-                console.log(data);
-                done();      
-                return data;
-              });    
-
-    }); */
-
-    const request_data = {
-        url: 'https://www.instapaper.com/api/1/oauth/access_token',
+    //Authenticate user before we carry on
+    const userData = {
+        url: 'https://www.instapaper.com/api/authenticate',
         method: 'post',
-        data: { x_auth_username : data.username , x_auth_password : data.password , x_auth_mode : 'client_auth' },
+        data: { 
+            username : user,
+            password : userpassword, 
+         } 
     }
+
+    needle.post(userData.url, userData.data, function(err, resp) {
+       
+       switch (resp.statusCode) {
+           case 403:
+               response.send({'data' : resp.statusCode});
+               console.log(resp.statusMessage, resp.statusCode);
+               break;
+            case 500:
+                response.send({'data' : resp.statusCode});
+                console.log(resp.statusMessage, resp.statusCode);
+               break;
+            case 200: {
+                //getHighlights(user, userpassword, uid, oauth);
+                 //Request body for access token
+                const request_data = {
+                    url: 'https://www.instapaper.com/api/1/oauth/access_token',
+                    method: 'post',
+                    data: { 
+                      x_auth_username : user,
+                      x_auth_password : userpassword, 
+                      x_auth_mode : 'client_auth',
+                    } 
+                }
+  
+                //Request headers for access token
+                const oauth_params = oauth.authorize(request_data);
+  
+                var options = {
+                         headers: oauth.toHeader(oauth_params),
+                }
+
+                needle.post(request_data.url, request_data.data, options, function(err, resp) {
+                    if (err) console.error(err);  
+        
+                    insta_token_secret = resp['body'].split('&')[0].split('=')[1];
+                    insta_token = resp['body'].split('&')[1].split('=')[1];
+        
+                   
+                    //Receive the oauth token
+                    const oauthtoken = {
+                        key: insta_token,
+                        secret: insta_token_secret
+                    }
+
+        
+                    //Get bookmark list
+                    const booklist_data = {
+                         url: 'https://www.instapaper.com/api/1/bookmarks/list',
+                         method: 'post',
+                         data: { 
+                             x_auth_username : user,
+                             x_auth_password : userpassword, 
+                             x_auth_mode : 'client_auth',
+                        } 
+                    }
+        
+                    const booklist_params = oauth.authorize(booklist_data, oauthtoken);
+        
+                    var booklistOptions = {
+                         headers: oauth.toHeader(booklist_params),
+                    }
+        
+                    needle.post( booklist_data.url, booklist_data.data, booklistOptions, (err, resp) => {
+                             if (err) console.error(err);        
+                   
+                             resp.body.forEach((item) => {
+                                 if(item['bookmark_id'] !== undefined){
+                                    bookmarkList.push({
+                                         'id' : item['bookmark_id'],
+                                         'title': item['title'],
+                                         'url': item['url'],
+                                         'isSynced' : false
+                                    })
+                                }
+                              });
  
-    const oauth = OAuth({
-        consumer: {
-            key: '287b4ea14bdd4f488a7721abda57c261',
-            secret: 'b0354423a77c43feb07671cd2a67d4ed',
-        },
-        signature_method: 'HMAC-SHA1',
-        hash_function(base_string, key) {
-            return crypto
-                .createHmac('sha1', key)
-                .update(base_string)
-                .digest('base64')
-        },
-    })
+        
+                            console.log(`BOOK MARKS ${bookmarkList.values}`);
+                              ///TODO: Try and encrypt password to be saved in database
+                            db.collection('instapaperbookmarks').doc(uid).set({
+                                     credentials : {
+                                        'key': insta_token,
+                                        'secret' : insta_token_secret, 
+                                        'email' : user, 
+                                        'password' : userpassword,
+                                        'uid' : uid
+                                     },
+                                     instabookmarks: bookmarkList
+                            }).catch((err) => console.log(`ERROR BOOKMARKS ${err}`));     
 
-    
-    axios({
-        method: 'post',
-        url: 'https://www.instapaper.com/api/1/oauth/access_token',
-        data: request_data.data,
-        headers: {'Content-Type' : 'application/x-www-form-urlencoded', 'Authorization': oauth.toHeader(oauth.authorize(request_data))},
-    })
-      .then(function (response) {
-        console.log(response);
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
-   
-
-   /*  
-
-    
-    const { JSDOM } = jsdom;
-    const { window } = new JSDOM();
-   // const { document } = (new JSDOM('')).window;
-   // global.document = document;
-
-    var $ = jQuery = require('jquery')(window);
-
-    $.ajax({
-        url: request_data.url,
-        type: request_data.method,
-        data: request_data.data,
-        headers: oauth.toHeader(oauth.authorize(request_data)),
-    }).done(function(data){
-        console.log(data);
-        return data;
-    });     */
+                            console.log(resp.statusMessage, resp.statusCode);
+                            response.send({'data' : resp.statusCode});
+                    });  
+                }); 
+                break;
+            }
+           default:
+               response.send({'data' : err});
+               break;
+       }
+    }); 
 
 });
+
+
+exports.syncBookmarkHighlights = functions.region('europe-west2').https.onRequest((request, response) => {
+
+    const { body } = request;
+    const user = body.data.username;
+    const userpassword = body.data.password;
+    const uid = body.data.uid;
+    const bookmarkId = body.data.bookmarkID;
+    const key = body.data.key;
+    const secret = body.data.secret; 
+
+    var highlights = [];
+
+    console.log(`BODYDATA ${secret}`);
+
+    //OAuth pack that creates signed signatures 
+   const oauth = OAuth({
+    consumer: {
+        "key": INSTAPAPER_KEY,
+        "secret": INSTAPAPER_SECRET
+   },
+   signature_method: 'HMAC-SHA1',
+   hash_function(base_string, key) {
+       return crypto
+           .createHmac('sha1', key)
+           .update(base_string)
+           .digest('base64')
+   },
+   })
+            
+    const oauthtoken = {
+            key: key,
+            secret: secret
+    }
+    const request_data = {
+        url: `https://www.instapaper.com/api/1.1/bookmarks/${bookmarkId}/highlights`,
+        method: 'post',
+        data: { 
+            x_auth_username : user,
+            x_auth_password : userpassword, 
+            x_auth_mode : 'client_auth',
+            } 
+        }
+  
+        
+        const oauth_params = oauth.authorize(request_data, oauthtoken);
+  
+        var options = {
+             headers: oauth.toHeader(oauth_params),
+        }
+
+        needle.post( request_data.url, request_data.data, options, (err, resp) => {
+            if (err) console.error(err);        
+            console.log(`BODY ${resp.body}`);
+            
+           
+                resp.body.forEach((item) => {
+                    if(item['bookmark_id'] === bookmarkId){
+                       highlights.push({
+                            'bookmarkId' : item['bookmark_id'],
+                            'id': item['highlight_id'],
+                            'highlight' : item['text'],
+                            'note' : item['note'],
+                            'category': 'uncategorised',
+                            'color': '#808080',
+                       })
+                   }
+                });
+
+            
+                if(highlights.length > 0){
+                     ///TODO: Try and encrypt password to be saved in database
+                    db.collection('instapaperhighlights').doc(uid)
+                                                         .collection('highlights')
+                                                         .doc(bookmarkId.toString()).set({
+                            instaHighlights: highlights
+                    }).catch((err) => console.log(`ERROR BOOKMARKS ${err}`));     
+            
+                    response.send({'data' : 200})
+                }
+                else{
+                    response.send({'data' : 403})
+                }   
+              
+        });  
+});
+
+
+
+exports.sendNotify = functions.region('europe-west2').firestore.document('instapaperbookmarks/{id}')
+    .onCreate((snapshot, context) => {
+        console.log(context.params.id);
+        const highlightData = snapshot.data();
+        const querySnapshot =  
+                db.collection('users')
+                  .doc(highlightData.uid)
+                  .collection('tokens')
+                  .get();
+
+        const tokens = querySnapshot.docs.map(snap => snap.id);
+        const payload = admin.messaging.MessagingPayload = {
+            notification : {
+                title : 'New Order', 
+                body : 'You highlights are ready', 
+                icon: '', 
+                clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+            }
+        }
+        return fcm.dataIsReady(tokens, payload);
+    });
