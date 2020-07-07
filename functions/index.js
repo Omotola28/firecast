@@ -1,5 +1,3 @@
-
-//const pdfUtil = require('pdf-to-text');
 const pdf = require('pdf-parse');
 const functions = require('firebase-functions');
 const gcs = require('@google-cloud/storage')
@@ -36,11 +34,9 @@ const scrapeData = async (username) => {
     const browser = await puppeteer.launch( {args: ['--no-sandbox'], headless: true });
     const page = await browser.newPage();
 
-    console.log(username);
 
     await page.goto(`https://medium.com/${username}/highlights`);
 
-    
 
     try {
             await page.waitForSelector(".fv", { visible: true, timeout: 50000 });
