@@ -31,7 +31,7 @@
     "axios-oauth-client": "^1.2.1",
     "axios-token-interceptor": "^0.2.0",
     "qs": "^6.9.1",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "jquery": "^3.4.1",
     "jsdom": "^16.2.0",
     "oauth": "^0.9.15",
