@@ -30,7 +30,7 @@
     "axios": "^0.19.2",
     "axios-oauth-client": "^1.2.1",
     "axios-token-interceptor": "^0.2.0",
-    "qs": "^6.9.1",
+    "qs": "^6.9.7",
     "node-fetch": "^2.6.0",
     "jquery": "^3.4.1",
     "jsdom": "^16.2.0",
