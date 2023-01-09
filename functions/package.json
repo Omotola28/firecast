@@ -15,8 +15,8 @@
   "dependencies": {
     "@google-cloud/firestore": "2.6.0",
     "@google-cloud/storage": "^4.1.2",
-    "firebase-admin": "^8.9.0",
-    "firebase-functions": "^3.3.0",
+    "firebase-admin": "^11.4.1",
+    "firebase-functions": "^3.24.1",
     "pdf-parse": "^1.1.1",
     "pdf-to-text": "0.0.7",
     "should": "^13.2.3",
